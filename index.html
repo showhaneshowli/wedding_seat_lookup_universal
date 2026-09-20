@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HaoYun &amp; Emma WEDDING</title>
+    <!-- 引入 PapaParse 用於解析 Google Sheet CSV -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <style>
+        body {
+            font-family: 'Helvetica Neue', Helvetica, Arial, 'Microsoft JhengHei', sans-serif;
+            background-color: #fdfaf6;
+            color: #5a4b43;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .container {
+            background: #ffffff;
+            padding: 30px 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            max-width: 500px;
+            width: 100%;
+            text-align: center;
+            margin-top: 20px;
+            border-top: 5px solid #d88c9a;
+        }
+        h1 {
+            color: #d88c9a;
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+        p.subtitle {
+            font-size: 14px;
+            color: #888;
+            margin-bottom: 20px;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            font-size: 16px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            box-sizing: border-box;
+            margin-bottom: 15px;
+            outline: none;
+        }
+        input[type="text"]:focus {
+            border-color: #d88c9a;
+        }
+        input[type="text"]:disabled {
+            background-color: #f5f5f5;
+            cursor: not-allowed;
+        }
+        button {
+            background-color: #d88c9a;
+            color: #fff;
+            border: none;
+            padding: 12px 20px;
+            font-size: 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            width: 100%;
+            transition: background 0.3s;
+        }
+        button:hover {
+            background-color: #c47b85;
+        }
+        button:disabled {
+            background-color: #e2c1c7;
+            cursor: not-allowed;
+        }
+        #result {
+            margin-top: 20px;
+            text-align: left;
+        }
+        .result-card {
+            background: #fdfaf6;
+            border: 1px solid #f2d5d8;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        .result-card h3 {
+            margin: 0 0 10px 0;
+            color: #d88c9a;
+            font-size: 22px;
+        }
+        .result-details {
+            display: flex;
+            justify-content: space-around;
+            flex-wrap: wrap;
+            font-size: 15px;
+            margin-bottom: 10px;
+        }
+        .result-details p {
+            margin: 5px 10px;
+        }
+        .not-found {
+            color: #d9534f;
+            text-align: center;
+            font-weight: bold;
+        }
+        
+        /* Map Styles */
+        .map-container {
+            margin-top: 20px;
+            background: #fff;
+            padding: 15px 10px;
+            border-radius: 8px;
+            border: 1px solid #eaeaea;
+            display: none; /* Hidden by default */
+            flex-direction: column;
+            align-items: center;
+        }
+        .stage {
+            width: 80%;
+            background-color: #e4cda7;
+            color: #fff;
+            padding: 8px;
+            border-radius: 4px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            text-align: center;
+            letter-spacing: 5px;
+        }
+        .floor-plan {
+            display: flex;
+            width: 100%;
+            justify-content: center;
+            gap: 10px;
+        }
+        .side {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            width: 40%;
+            gap: 10px;
+            justify-items: center;
+            align-content: start;
+        }
+        .side-title {
+            grid-column: 1 / -1;
+            text-align: center;
+            font-size: 14px;
+            color: #888;
+            margin-bottom: 5px;
+        }
+        .red-carpet {
+            width: 15%;
+            background: repeating-linear-gradient(
+                45deg,
+                #c13a3a,
+                #c13a3a 10px,
+                #a83232 10px,
+                #a83232 20px
+            );
+            border-radius: 4px;
+            box-shadow: inset 0 0 5px rgba(0,0,0,0.2);
+            position: relative;
+        }
+        .red-carpet::after {
+            content: "紅毯";
+            color: rgba(255, 255, 255, 0.8);
+            writing-mode: vertical-rl;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 14px;
+            letter-spacing: 5px;
+        }
+        .table {
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            background-color: #f0f0f0;
+            border: 1px solid #ccc;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            color: #555;
+            transition: all 0.3s;
+        }
+        .table.highlight {
+            background-color: #d88c9a;
+            color: #fff;
+            border-color: #bfa030;
+            transform: scale(1.3);
+            box-shadow: 0 0 10px rgba(216, 140, 154, 0.6);
+            font-weight: bold;
+            z-index: 10;
+        }
+    
+        .banner-img {
+            width: 100%;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            object-fit: cover;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <img src="haoyunEmma.jpg" alt="HaoYun & Emma Wedding" class="banner-img">
+        <h1>婚宴座位查詢</h1>
+        <p class="subtitle" id="statusText">正在連線至最新名單...</p>
+
+        <input type="text" id="nameInput" placeholder="名單讀取中，請稍候..." onkeypress="handleKeyPress(event)" disabled>
+        <button id="searchBtn" onclick="searchGuest()" disabled>查詢桌號</button>
+
+        <div id="result"></div>
+
+        <div class="map-container" id="mapContainer">
+            <div class="stage">主舞台</div>
+            <div class="floor-plan">
+                <div class="side" id="brideSide">
+                    <div class="side-title">女方親友</div>
+                </div>
+                <div class="red-carpet"></div>
+                <div class="side" id="groomSide">
+                    <div class="side-title">男方親友</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // =================================================================
+        // Google 試算表 CSV 直連網址
+        // =================================================================
+        const sheetCSVUrl = 'https://docs.google.com/spreadsheets/d/1UnWILv0gZ-EekVU5CFXgVHtkUO0w_zEB8YhEdZA_QlA/export?format=csv'; 
+
+        let guestData = [];
+
+        // 網頁載入時，自動去抓取 Google 表單資料
+        document.addEventListener('DOMContentLoaded', () => {
+            Papa.parse(sheetCSVUrl, {
+                download: true,
+                header: true, 
+                complete: function(results) {
+                    // 1. 過濾掉空白資料列
+                    guestData = results.data.filter(row => row['姓名'] && row['姓名'].trim() !== '');
+                    
+                    // 2. 動態計算會場有哪些桌號，並繪製平面圖
+                    const brideTables = new Set();
+                    const groomTables = new Set();
+                    
+                    guestData.forEach(g => {
+                        const tNum = parseInt(g['桌號'], 10);
+                        if (!isNaN(tNum)) {
+                            if (g['Side'] === '女方') brideTables.add(tNum);
+                            if (g['Side'] === '男方') groomTables.add(tNum);
+                        }
+                    });
+                    
+                    initMap(
+                        Array.from(brideTables).sort((a,b)=>a-b), 
+                        Array.from(groomTables).sort((a,b)=>a-b)
+                    );
+                    
+                    // 3. 資料載入完成，解鎖搜尋功能
+                    document.getElementById('statusText').innerText = '歡迎蒞臨！請輸入您的姓名查詢桌號';
+                    const nameInput = document.getElementById('nameInput');
+                    nameInput.placeholder = "請輸入姓名 (例如: 王小明)";
+                    nameInput.disabled = false;
+                    document.getElementById('searchBtn').disabled = false;
+                },
+                error: function(err) {
+                    document.getElementById('statusText').innerHTML = '<span style="color:red;">載入名單失敗，請稍後重新整理。</span>';
+                    console.error("載入 CSV 失敗:", err);
+                }
+            });
+        });
+
+        function initMap(brideLayout, groomLayout) {
+            const brideDiv = document.getElementById('brideSide');
+            const groomDiv = document.getElementById('groomSide');
+            
+            brideDiv.querySelectorAll('.table').forEach(e => e.remove());
+            groomDiv.querySelectorAll('.table').forEach(e => e.remove());
+
+            brideLayout.forEach(num => {
+                const t = document.createElement('div');
+                t.className = 'table';
+                t.id = 'table-' + num;
+                t.innerText = num;
+                brideDiv.appendChild(t);
+            });
+
+            groomLayout.forEach(num => {
+                const t = document.createElement('div');
+                t.className = 'table';
+                t.id = 'table-' + num;
+                t.innerText = num;
+                groomDiv.appendChild(t);
+            });
+        }
+
+        function searchGuest() {
+            const input = document.getElementById('nameInput').value.trim();
+            const resultDiv = document.getElementById('result');
+            const mapContainer = document.getElementById('mapContainer');
+            
+            resultDiv.innerHTML = '';
+            document.querySelectorAll('.table').forEach(el => el.classList.remove('highlight'));
+
+            if (!input) {
+                resultDiv.innerHTML = '<p class="not-found">請輸入姓名喔！</p>';
+                mapContainer.style.display = 'none';
+                return;
+            }
+
+            const results = guestData.filter(g => g['姓名'].includes(input));
+
+            if (results.length > 0) {
+                let html = '';
+                results.forEach(g => {
+                    html += `
+                        <div class="result-card">
+                            <h3>${g['姓名']}</h3>
+                            <div class="result-details">
+                                <p><strong>桌號：</strong> 第 <span style="color:#d88c9a; font-size: 18px; font-weight:bold;">${g['桌號']}</span> 桌</p>
+                                <p><strong>賓客方：</strong> ${g['Side']}</p>
+                                <p><strong>人數：</strong> ${g['人數']} 位</p>
+                            </div>
+                        </div>
+                    `;
+                });
+                resultDiv.innerHTML = html;
+                mapContainer.style.display = 'flex';
+                
+                results.forEach(g => {
+                    const tableEl = document.getElementById('table-' + g['桌號']);
+                    if (tableEl) {
+                        tableEl.classList.add('highlight');
+                    }
+                });
+            } else {
+                resultDiv.innerHTML = '<p class="not-found">找不到此姓名，請確認輸入是否正確，或洽詢現場招待人員。</p>';
+                mapContainer.style.display = 'none';
+            }
+        }
+
+        function handleKeyPress(e) {
+            if (e.key === 'Enter' && !document.getElementById('searchBtn').disabled) {
+                searchGuest();
+            }
+        }
+    </script>
+</body>
+</html>
